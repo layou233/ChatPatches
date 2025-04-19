@@ -29,6 +29,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.ConcurrentModificationException;
+import java.util.concurrent.ForkJoinPool;
 import java.util.function.Function;
 
 import static obro1961.chatpatches.ChatPatches.LOGGER;
@@ -308,7 +309,7 @@ public class ChatLog {
      */
     public static void tickSaveCounter() {
         if(config.chatlogSaveInterval > 0 && ticksUntilSave == 0)
-            serialize();
+            ForkJoinPool.commonPool().execute(ChatLog::serialize);
 
         ticksUntilSave--;
 
@@ -322,7 +323,7 @@ public class ChatLog {
      */
     public static void saveIfPaused(Screen screen) {
         if(config.chatlogSaveInterval == 0 && (!mc.isWindowFocused() || screen instanceof GameMenuScreen))
-            serialize();
+            ForkJoinPool.commonPool().execute(ChatLog::serialize);
     }
 
     /**

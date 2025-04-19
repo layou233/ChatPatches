@@ -22,6 +22,8 @@ import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.concurrent.ForkJoinPool;
+
 public class ChatPatches implements ClientModInitializer {
 	public static final String MOD_ID = "chatpatches";
 	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
@@ -49,7 +51,7 @@ public class ChatPatches implements ClientModInitializer {
 		// according to my testing, this event works as needed when the game disconnects and on crashes if the game is functional at that point
 		// testing details (server=hypixel): normal disconnects work on both world and server, manual F3+C crash works on world but NOT server
 		// honestly I don't care if it fails on crashes, its fixable a) through the save interval or b) by fixing the crash's source
-		ClientPlayConnectionEvents.DISCONNECT.register((network, client) -> ChatLog.serialize());
+		ClientPlayConnectionEvents.DISCONNECT.register((network, client) -> ForkJoinPool.commonPool().execute(ChatLog::serialize));
 		ScreenEvents.AFTER_INIT.register((client, screen, sW, sH) -> ChatLog.saveIfPaused(screen));
 		ClientTickEvents.END_WORLD_TICK.register(world -> ChatLog.tickSaveCounter());
 
