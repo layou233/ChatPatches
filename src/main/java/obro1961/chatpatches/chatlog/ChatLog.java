@@ -28,7 +28,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.ConcurrentModificationException;
+import java.util.List;
 import java.util.concurrent.ForkJoinPool;
 import java.util.function.Function;
 
@@ -74,19 +76,19 @@ public class ChatLog {
          * lists mutable.
          */
         public static final Codec<Data> CODEC = RecordCodecBuilder.create(inst -> inst.group(
-            Codec.list(TextCodecs.CODEC).xmap(ArrayList::new, Function.identity()).fieldOf("messages").forGetter(data -> data.messages),
-            Codec.list(Codec.STRING).xmap(ArrayList::new, Function.identity()).fieldOf("history").forGetter(data -> data.history)
+            Codec.list(TextCodecs.CODEC).xmap(list -> Collections.synchronizedList(new ArrayList<>(list)), Function.identity()).fieldOf("messages").forGetter(data -> new ArrayList<>(data.messages)),
+            Codec.list(Codec.STRING).xmap(list -> Collections.synchronizedList(new ArrayList<>(list)), Function.identity()).fieldOf("history").forGetter(data -> new ArrayList<>(data.history))
         ).apply(inst, (messages, history) -> Util.make(new Data(), data -> {
             data.messages = messages;
             data.history = history;
         })));
 
-        public ArrayList<Text> messages;
-        public ArrayList<String> history;
+        public List<Text> messages;
+        public List<String> history;
 
         private Data() {
-            messages = Lists.newArrayListWithExpectedSize(DEFAULT_SIZE);
-            history = Lists.newArrayListWithExpectedSize(DEFAULT_SIZE);
+            messages = Collections.synchronizedList(Lists.newArrayListWithExpectedSize(DEFAULT_SIZE));
+            history = Collections.synchronizedList(Lists.newArrayListWithExpectedSize(DEFAULT_SIZE));
         }
 
         private Data(boolean done) {
@@ -169,9 +171,9 @@ public class ChatLog {
             // the sublist indices make sure to only keep the newest data and remove the oldest
             // NOTE: the chat log system has the oldest messages at 0, but vanilla has the newest at 0
             if(messageCount() > config.chatMaxMessages)
-                data.messages = (ArrayList<Text>)data.messages.subList( messageCount() - config.chatMaxMessages, messageCount() );
+                data.messages = data.messages.subList( messageCount() - config.chatMaxMessages, messageCount() );
             if(historyCount() > config.chatMaxMessages)
-                data.history = (ArrayList<String>)data.history.subList( historyCount() - config.chatMaxMessages, historyCount() );
+                data.history = data.history.subList( historyCount() - config.chatMaxMessages, historyCount() );
 
             loaded = true;
         } catch(Exception e) {
